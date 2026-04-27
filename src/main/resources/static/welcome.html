@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+    <title>VSST | AI Control Tower</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --accent-blue: #4fc3f7;
+            --accent-purple: #a78bfa;
+            --accent-teal: #06b6d4;
+            --text-primary: #e2e8f0;
+            --text-muted: #64748b;
+            --bg-dark: #07071a;
+        }
+
+        html, body {
+            height: 100%;
+            background: var(--bg-dark);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* ===== ANIMATED BACKGROUND ===== */
+        #bgCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Aurora blobs */
+        .aurora-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.12;
+            z-index: 1;
+            pointer-events: none;
+            animation: blobDrift 20s ease-in-out infinite alternate;
+        }
+        .aurora-blob-1 {
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, #4fc3f7, #0284c7);
+            top: -200px; left: -100px;
+            animation-duration: 22s;
+        }
+        .aurora-blob-2 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, #a78bfa, #7c3aed);
+            top: 20%; right: -150px;
+            animation-duration: 18s; animation-delay: -8s;
+        }
+        .aurora-blob-3 {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, #06b6d4, #0891b2);
+            bottom: -100px; left: 30%;
+            animation-duration: 25s; animation-delay: -15s;
+        }
+        .aurora-blob-4 {
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, #f59e0b, #d97706);
+            bottom: 20%; right: 15%;
+            animation-duration: 20s; animation-delay: -5s;
+            opacity: 0.07;
+        }
+
+        @keyframes blobDrift {
+            0%   { transform: translate(0,0) scale(1); }
+            33%  { transform: translate(40px,-30px) scale(1.05); }
+            66%  { transform: translate(-20px,40px) scale(0.95); }
+            100% { transform: translate(20px,10px) scale(1.02); }
+        }
+
+        /* ===== NAVBAR ===== */
+        .nav {
+            position: relative;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 48px;
+            background: rgba(7,7,26,0.7);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(79,195,247,0.08);
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .nav-logo-icon {
+            width: 36px; height: 36px;
+        }
+
+        .nav-brand-name {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--accent-blue);
+            letter-spacing: 0.5px;
+        }
+
+        .nav-brand-sub {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: block;
+            margin-top: -2px;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-theme {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 4px;
+            border-radius: 6px;
+            transition: transform 0.2s;
+        }
+        .btn-theme:hover { transform: rotate(20deg); }
+
+        .btn-login {
+            padding: 9px 22px;
+            background: transparent;
+            border: 1px solid rgba(79,195,247,0.35);
+            color: var(--accent-blue);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-login:hover { background: rgba(79,195,247,0.08); }
+
+        .btn-create {
+            padding: 9px 22px;
+            background: var(--accent-blue);
+            color: #07071a;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-create:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* ===== HERO ===== */
+        .hero {
+            position: relative;
+            z-index: 10;
+            min-height: calc(100vh - 73px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 60px 24px 40px;
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(79,195,247,0.08);
+            border: 1px solid rgba(79,195,247,0.2);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 28px;
+        }
+
+        .hero-eyebrow-dot {
+            width: 7px; height: 7px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            animation: eyebrowPulse 2s ease-in-out infinite;
+        }
+        @keyframes eyebrowPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+
+        h1 {
+            font-size: clamp(36px, 5.5vw, 72px);
+            font-weight: 900;
+            line-height: 1.08;
+            letter-spacing: -1.5px;
+            color: #ffffff;
+            margin-bottom: 24px;
+            max-width: 900px;
+        }
+
+        h1 .h1-accent {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-sub {
+            font-size: clamp(14px, 1.6vw, 18px);
+            color: #94a3b8;
+            line-height: 1.7;
+            max-width: 600px;
+            margin-bottom: 44px;
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 72px;
+        }
+
+        .btn-hero-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-teal));
+            color: #07071a;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            text-decoration: none;
+            box-shadow: 0 0 30px rgba(79,195,247,0.25), 0 8px 24px rgba(79,195,247,0.15);
+            transition: all 0.3s;
+        }
+        .btn-hero-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 50px rgba(79,195,247,0.4), 0 16px 40px rgba(79,195,247,0.25);
+        }
+
+        .btn-hero-outline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 32px;
+            background: rgba(255,255,255,0.04);
+            color: #e2e8f0;
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            text-decoration: none;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+        .btn-hero-outline:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.25);
+            transform: translateY(-2px);
+        }
+
+        /* ===== BIG BOX STATS STRIP ===== */
+        .stats-strip {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            position: relative;
+        }
+
+        .stat-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 16px;
+            backdrop-filter: blur(20px);
+            padding: 28px 32px;
+            text-align: center;
+            flex: 1 1 180px; /* Forces boxes to be big enough to fit the text */
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            border-color: rgba(79,195,247,0.3);
+            background: rgba(255,255,255,0.05);
+            transform: translateY(-3px);
+        }
+
+        .stat-num {
+            display: block;
+            font-size: clamp(22px, 3vw, 32px);
+            font-weight: 800;
+            color: var(--accent-blue);
+            font-family: 'Inter', monospace;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-lbl {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-top: 6px;
+        }
+
+        /* ===== FEATURES ===== */
+        .features {
+            position: relative;
+            z-index: 10;
+            padding: 80px 48px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: clamp(22px, 3vw, 36px);
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .section-sub {
+            text-align: center;
+            font-size: 15px;
+            color: #64748b;
+            margin-bottom: 48px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+            padding: 28px 24px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .feature-card:hover { border-color: rgba(79,195,247,0.2); transform: translateY(-4px); }
+        .feature-card:hover::before { opacity: 1; }
+
+        .feature-icon { font-size: 32px; margin-bottom: 14px; }
+
+        .feature-card h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 8px;
+        }
+
+        .feature-card p {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 24px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            font-size: 12px;
+            color: #475569;
+        }
+
+        /* ===== LIGHT THEME ===== */
+        body.light-theme {
+            background: #f0f4f8;
+            color: #1a202c;
+        }
+        body.light-theme .nav {
+            background: rgba(240,244,248,0.9);
+            border-bottom-color: rgba(0,0,0,0.08);
+        }
+        body.light-theme .feature-card {
+            background: rgba(255,255,255,0.7);
+            border-color: rgba(0,0,0,0.08);
+        }
+        body.light-theme .btn-hero-outline {
+            background: rgba(0,0,0,0.03);
+            color: #0f172a;
+            border: 1px solid rgba(0,0,0,0.15);
+        }
+        body.light-theme .btn-hero-outline:hover {
+            background: rgba(0,0,0,0.06);
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+        body.light-theme .stats-strip {
+            background: transparent;
+            border: none;
+            backdrop-filter: none;
+        }
+        body.light-theme .stat-item {
+            background: rgba(255,255,255,0.8);
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        body.light-theme .footer {
+            border-top-color: rgba(0,0,0,0.08);
+        }
+        body.light-theme .aurora-blob {
+            opacity: 0.18;
+        }
+        body.light-theme h1,
+        body.light-theme .section-title { color: #0f172a; }
+        body.light-theme .hero-sub { color: #475569; }
+        body.light-theme .feature-card p { color: #475569; }
+        body.light-theme .feature-card h3 { color: #0f172a; }
+
+        @media (max-width: 768px) {
+            .nav { padding: 14px 20px; }
+            .features { padding: 48px 20px; }
+            .stat-item { flex: 1 1 45%; } /* Forces 2 per row on mobile */
+        }
+
+        /* Globe background */
+        .globe-bg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: min(700px, 95vw);
+            height: min(700px, 95vw);
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.38;
+        }
+
+        .globe-bg canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Ensure all hero content is above globe */
+        .hero > *:not(.blob-1):not(.blob-2):not(.globe-bg) {
+            position: relative;
+            z-index: 2;
+        }
+
+    </style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<div class="aurora-blob aurora-blob-1"></div>
+<div class="aurora-blob aurora-blob-2"></div>
+<div class="aurora-blob aurora-blob-3"></div>
+<div class="aurora-blob aurora-blob-4"></div>
+
+<nav class="nav">
+    <a href="/welcome.html" class="nav-brand">
+        <svg class="nav-logo-icon" viewBox="0 0 44 44" fill="none">
+            <rect x="1" y="17" width="10" height="10" rx="3" stroke="#4fc3f7" stroke-width="1.8"/>
+            <rect x="7" y="17" width="10" height="10" rx="3" stroke="#4fc3f7" stroke-width="1.8" fill="rgba(79,195,247,0.07)"/>
+            <rect x="15" y="12" width="14" height="20" rx="2" stroke="#4fc3f7" stroke-width="2" fill="rgba(79,195,247,0.12)"/>
+            <line x1="15" y1="22" x2="29" y2="22" stroke="#4fc3f7" stroke-width="1.2" opacity="0.6"/>
+            <line x1="22" y1="12" x2="22" y2="32" stroke="#4fc3f7" stroke-width="1.2" opacity="0.6"/>
+            <rect x="27" y="17" width="10" height="10" rx="3" stroke="#4fc3f7" stroke-width="1.8" fill="rgba(79,195,247,0.07)"/>
+            <rect x="33" y="17" width="10" height="10" rx="3" stroke="#4fc3f7" stroke-width="1.8"/>
+        </svg>
+        <div>
+            <span class="nav-brand-name">VSST</span>
+            <span class="nav-brand-sub">Virtual Supply Chain &amp; Smart Transit</span>
+        </div>
+    </a>
+    <div class="nav-actions">
+        <button class="btn-theme" id="themeToggleBtn" onclick="window.toggleTheme && window.toggleTheme()" title="Toggle Theme">☀️</button>
+        <a href="/login.html"    class="btn-login">Login</a>
+        <a href="/register.html" class="btn-create">Create Account</a>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="hero-eyebrow">
+        <span class="hero-eyebrow-dot"></span>
+        Global Supply Chain Intelligence Platform
+    </div>
+
+    <h1>
+        Autonomous AI Control Tower<br/>
+        <span class="h1-accent">for Resilient Supply Chains</span>
+    </h1>
+
+    <p class="hero-sub">
+        Preemptively detect, flag, and resolve transit disruptions before they cascade
+        into broader delays. Real-time tracking, AI rerouting, and live intelligence
+        across global supply chain networks.
+    </p>
+
+    <div class="hero-cta">
+        <a href="/login.html"    class="btn-hero-primary">🚀 Launch Dashboard</a>
+        <a href="/register.html" class="btn-hero-outline">+ Create Account</a>
+    </div>
+
+    <div class="stats-strip">
+        <div class="stat-item">
+            <span class="stat-num">200+</span>
+            <span class="stat-lbl">Global Cities</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-num">4</span>
+            <span class="stat-lbl">Transport Modes</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-num">AI</span>
+            <span class="stat-lbl">Auto-Disruption</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-num">6</span>
+            <span class="stat-lbl">Continents</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-num">Real&#8209;Time</span>
+            <span class="stat-lbl">GPS Tracking</span>
+        </div>
+    </div>
+</section>
+
+<section class="features">
+    <h2 class="section-title">Everything you need to run global logistics</h2>
+    <p class="section-sub">AI-powered, multi-modal, globally connected</p>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🌍</div>
+            <h3>Global Control Tower</h3>
+            <p>Real-time tracking of trucks, ships, planes and trains across 200+ cities on 6 continents with live GPS movement simulation.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🤖</div>
+            <h3>AI Auto-Disruption &amp; Rerouting</h3>
+            <p>Mode-aware disruptions using live news, maritime piracy zones, airspace restrictions and weather — with automatic AI rerouting.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🚢✈️🚂🚛</div>
+            <h3>Multi-Modal Transport</h3>
+            <p>Manage sea lanes, air corridors, rail networks and road routes with partner company integration for Maersk, Emirates, DB Cargo and more.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔮</div>
+            <h3>Digital Twin Scenarios</h3>
+            <p>Simulate Suez Canal blockages, airport strikes, volcanic ash clouds and rail network failures — see AI auto-response in real time.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Analytics Intelligence</h3>
+            <p>Mode-by-mode performance KPIs, disruption history charts, route health scoring and cargo breakdown dashboards.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔐</div>
+            <h3>Multi-Tenant Security</h3>
+            <p>Full data isolation per admin. Partner company logins see only their shipments. Driver dashboards show only assigned routes.</p>
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    &copy; 2026 VSST &mdash; Virtual Supply Chain &amp; Smart Transit &bull; Built for Hackathon 2026
+</footer>
+
+<script>
+    (function() {
+        var canvas = document.getElementById('bgCanvas');
+        var ctx    = canvas.getContext('2d');
+        var W, H;
+
+        function resize() {
+            W = canvas.width  = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // --- City coordinates [lat, lng] ---
+        var cityData = [
+            [40.7, -74.0],   // New York
+            [51.5, -0.1],    // London
+            [48.9,  2.4],    // Paris
+            [52.5, 13.4],    // Berlin
+            [35.7, 139.7],   // Tokyo
+            [22.3, 114.2],   // Hong Kong
+            [1.3,  103.8],   // Singapore
+            [28.6,  77.2],   // Delhi
+            [19.1,  72.9],   // Mumbai
+            [-33.9, 151.2],  // Sydney
+            [25.2,  55.3],   // Dubai
+            [55.8,  37.6],   // Moscow
+            [31.2, 121.5],   // Shanghai
+            [-23.5, -46.6],  // São Paulo
+            [6.5,    3.4],   // Lagos
+            [-26.2,  28.1],  // Johannesburg
+            [34.1, -118.2],  // Los Angeles
+            [41.9,  12.5],   // Rome
+            [48.2,  16.4],   // Vienna
+            [37.6, 127.0],   // Seoul
+            [13.7, 100.5],   // Bangkok
+            [39.9, 116.4],   // Beijing
+            [51.9,   4.5],   // Rotterdam
+            [53.5,  10.0],   // Hamburg
+            [34.0,  -6.8],   // Casablanca
+        ];
+
+        // Project lat/lng to screen coords
+        function project(lat, lng) {
+            var x = (lng + 180) / 360 * W;
+            var y = (90 - lat)  / 180 * H;
+            return { x: x, y: y };
+        }
+
+        // Build routes (random selection)
+        var routes = [];
+        for (var i = 0; i < cityData.length; i++) {
+            for (var j = i + 1; j < cityData.length; j++) {
+                if (Math.random() < 0.18) {
+                    routes.push([ i, j ]);
+                }
+            }
+        }
+
+        // Packets travelling routes
+        var packets = [];
+        var PACKET_COLORS = ['#4fc3f7', '#a78bfa', '#06b6d4', '#f59e0b', '#10b981'];
+        routes.forEach(function(r) {
+            if (Math.random() < 0.7) {
+                packets.push({
+                    route:  r,
+                    t:      Math.random(),
+                    speed:  0.0008 + Math.random() * 0.0018,
+                    color:  PACKET_COLORS[Math.floor(Math.random() * PACKET_COLORS.length)],
+                    size:   1.5 + Math.random() * 1.5
+                });
+            }
+        });
+
+        // Stars
+        var stars = Array.from({ length: 180 }, function() {
+            return {
+                x:  Math.random(),
+                y:  Math.random(),
+                r:  Math.random() * 1.2,
+                o:  Math.random() * 0.35 + 0.05,
+                sp: Math.random() * 3 + 1
+            };
+        });
+
+        var time = 0;
+
+        // Quadratic bezier position
+        function bezierPoint(p1, cp, p2, t) {
+            var mt = 1 - t;
+            return {
+                x: mt * mt * p1.x + 2 * mt * t * cp.x + t * t * p2.x,
+                y: mt * mt * p1.y + 2 * mt * t * cp.y + t * t * p2.y
+            };
+        }
+
+        function hexToRgb(hex) {
+            var r = parseInt(hex.slice(1,3), 16);
+            var g = parseInt(hex.slice(3,5), 16);
+            var b = parseInt(hex.slice(5,7), 16);
+            return r + ',' + g + ',' + b;
+        }
+
+        function draw() {
+            time += 0.006;
+            ctx.clearRect(0, 0, W, H);
+
+            // Check theme state dynamically
+            var isLight = document.body.classList.contains('light-theme');
+
+            // Background gradient
+            var bg = ctx.createRadialGradient(W * 0.5, H * 0.4, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.85);
+            if (isLight) {
+                bg.addColorStop(0,   '#ffffff');
+                bg.addColorStop(0.4, '#f8fafc');
+                bg.addColorStop(1,   '#f1f5f9');
+            } else {
+                bg.addColorStop(0,   '#0d1035');
+                bg.addColorStop(0.4, '#07071f');
+                bg.addColorStop(1,   '#030310');
+            }
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, W, H);
+
+            // Animated scan line (subtle)
+            var scanY = (time * 40) % H;
+            var scanGrad = ctx.createLinearGradient(0, scanY - 80, 0, scanY + 80);
+            scanGrad.addColorStop(0, 'rgba(79,195,247,0)');
+            scanGrad.addColorStop(0.5, isLight ? 'rgba(79,195,247,0.05)' : 'rgba(79,195,247,0.025)');
+            scanGrad.addColorStop(1, 'rgba(79,195,247,0)');
+            ctx.fillStyle = scanGrad;
+            ctx.fillRect(0, scanY - 80, W, 160);
+
+            // Stars
+            stars.forEach(function(s) {
+                var twinkle = s.o + Math.sin(time * s.sp + s.x * 30) * 0.12;
+                ctx.beginPath();
+                ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2);
+                ctx.fillStyle = isLight ? 'rgba(100,116,139,' + Math.max(0, twinkle * 0.5) + ')' : 'rgba(255,255,255,' + Math.max(0, twinkle) + ')';
+                ctx.fill();
+            });
+
+            // World map grid
+            ctx.strokeStyle = isLight ? 'rgba(79,195,247,0.15)' : 'rgba(79,195,247,0.04)';
+            ctx.lineWidth = 0.5;
+            for (var lng = -180; lng <= 180; lng += 20) {
+                var tp = project(90, lng);
+                var bp = project(-90, lng);
+                ctx.beginPath(); ctx.moveTo(tp.x, tp.y); ctx.lineTo(bp.x, bp.y); ctx.stroke();
+            }
+            for (var lat = -80; lat <= 80; lat += 20) {
+                var lp = project(lat, -180);
+                var rp = project(lat,  180);
+                ctx.beginPath(); ctx.moveTo(lp.x, lp.y); ctx.lineTo(rp.x, rp.y); ctx.stroke();
+            }
+
+            // Route arcs
+            routes.forEach(function(r) {
+                var c1 = cityData[r[0]];
+                var c2 = cityData[r[1]];
+                var p1 = project(c1[0], c1[1]);
+                var p2 = project(c2[0], c2[1]);
+
+                // Control point: arc upward between cities
+                var cpX = (p1.x + p2.x) * 0.5;
+                var cpY = Math.min(p1.y, p2.y) - Math.abs(p2.x - p1.x) * 0.25 - 30;
+
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.quadraticCurveTo(cpX, cpY, p2.x, p2.y);
+                ctx.strokeStyle = isLight ? 'rgba(79,195,247,0.2)' : 'rgba(79,195,247,0.055)';
+                ctx.lineWidth   = 0.7;
+                ctx.stroke();
+            });
+
+            // City dots
+            cityData.forEach(function(c, i) {
+                var p = project(c[0], c[1]);
+                var pulse = (Math.sin(time * 2.5 + i * 0.8) + 1) * 0.5;
+
+                // Outer glow
+                var grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 8 + pulse * 6);
+                grd.addColorStop(0,   'rgba(79,195,247,' + (isLight ? 0.3 + pulse * 0.2 : 0.15 + pulse * 0.15) + ')');
+                grd.addColorStop(1,   'rgba(79,195,247,0)');
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 8 + pulse * 6, 0, Math.PI * 2);
+                ctx.fillStyle = grd;
+                ctx.fill();
+
+                // Inner dot
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(79,195,247,' + (isLight ? 0.8 + pulse * 0.2 : 0.6 + pulse * 0.4) + ')';
+                ctx.fill();
+            });
+
+            // Animated packets
+            packets.forEach(function(pkt) {
+                pkt.t += pkt.speed;
+                if (pkt.t > 1) pkt.t = 0;
+
+                var c1 = cityData[pkt.route[0]];
+                var c2 = cityData[pkt.route[1]];
+                var p1 = project(c1[0], c1[1]);
+                var p2 = project(c2[0], c2[1]);
+
+                var cpX = (p1.x + p2.x) * 0.5;
+                var cpY = Math.min(p1.y, p2.y) - Math.abs(p2.x - p1.x) * 0.25 - 30;
+
+                var pos = bezierPoint(p1, {x: cpX, y: cpY}, p2, pkt.t);
+
+                // Trail glow
+                var rgb = hexToRgb(pkt.color);
+                var trailGrd = ctx.createRadialGradient(
+                    pos.x, pos.y, 0, pos.x, pos.y, pkt.size * 4);
+                trailGrd.addColorStop(0, 'rgba(' + rgb + ',' + (isLight ? '0.6' : '0.4') + ')');
+                trailGrd.addColorStop(1, 'rgba(' + rgb + ',0)');
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, pkt.size * 4, 0, Math.PI * 2);
+                ctx.fillStyle = trailGrd;
+                ctx.fill();
+
+                // Core
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, pkt.size, 0, Math.PI * 2);
+                ctx.fillStyle = pkt.color;
+                ctx.fill();
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    })();
+</script>
+
+<script src="js/api-config.js"></script>
+<script src="js/theme.js"></script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VSST | Clients</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/shipments.css">
+</head>
+<body style="overflow:auto;background:var(--bg-primary);">
+
+<nav class="top-nav">
+    <a href="/index.html" class="nav-logo">
+        <svg width="32" height="32" viewBox="0 0 44 44" fill="none">
+            <path d="M8 12 L24 22 L8 32 Z" fill="rgba(79,195,247,0.2)" stroke="#4fc3f7" stroke-width="2"/>
+            <path d="M20 12 L36 22 L20 32 Z" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2"/>
+            <circle cx="8" cy="12" r="2.5" fill="#4fc3f7"/>
+            <circle cx="8" cy="32" r="2.5" fill="#4fc3f7"/>
+            <circle cx="36" cy="22" r="2.5" fill="#10b981"/>
+        </svg>
+        <span class="nav-logo-text">VSST</span>
+    </a>
+    <div class="nav-tabs">
+        <a href="/index.html"     class="nav-tab">&#127968; Control Tower</a>
+        <a href="/shipments.html" class="nav-tab">&#128666; Shipments</a>
+        <a href="/fleet.html"     class="nav-tab">&#128663; Fleet</a>
+        <a href="/clients.html"   class="nav-tab active">&#127970; Clients</a>
+        <a href="/analytics.html" class="nav-tab">&#128200; Analytics</a>
+    </div>
+    <div class="nav-right">
+        <div class="nav-user" id="navUser">
+            <span class="nav-user-avatar" id="navAvatar">A</span>
+            <span class="nav-user-name"   id="navName">Loading...</span>
+            <span class="nav-user-role"   id="navRole">--</span>
+        </div>
+        <button class="btn-nav-logout" onclick="apiLogout()">Logout</button>
+    </div>
+</nav>
+
+<div class="page-content">
+
+    <div class="page-header">
+        <div>
+            <div class="page-breadcrumb">OPERATIONS</div>
+            <h1 class="page-title">&#127970; Client Directory</h1>
+        </div>
+        <button class="btn-create" onclick="openCreateClientModal()">&#43; Add Client</button>
+    </div>
+
+    <div class="page-tabs">
+        <button class="page-tab-btn active" onclick="switchClientTab('all', this)">&#128101; All Clients</button>
+        <button class="page-tab-btn"        onclick="switchClientTab('senders', this)">&#128228; Senders</button>
+        <button class="page-tab-btn"        onclick="switchClientTab('receivers', this)">&#128229; Receivers</button>
+    </div>
+
+    <div id="clientsGrid" class="vehicles-grid">
+        <p style="color:var(--text-muted);font-size:13px;">Loading clients...</p>
+    </div>
+
+</div>
+
+<div class="modal-overlay" id="createClientModal" style="display:none;">
+    <div class="modal-box" style="max-width:560px;">
+        <div class="modal-header">
+            <h2>&#43; Add New Client</h2>
+            <button class="modal-close" onclick="closeCreateClientModal()">&#10005;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-error"   id="clientError"></div>
+            <div class="form-success" id="clientSuccess"></div>
+
+            <div class="form-group">
+                <label class="form-label">Client Type *</label>
+                <select class="form-input" id="clientType">
+                    <option value="SENDER">Sender (Ships cargo)</option>
+                    <option value="RECEIVER">Receiver (Accepts cargo)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Company Name *</label>
+                <input class="form-input" id="clientCompany"
+                       placeholder="e.g. Karnataka Chemicals Ltd."/>
+            </div>
+
+            <div class="modal-grid">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input class="form-input" type="email" id="clientEmail"
+                           placeholder="contact@company.com"/>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone</label>
+                    <input class="form-input" type="tel" id="clientPhone"
+                           placeholder="+91-XXXXXXXXXX"/>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">GSTIN</label>
+                <input class="form-input" id="clientGstin"
+                       placeholder="e.g. 29AABCK1234M1Z5"
+                       style="text-transform:uppercase;"/>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-modal-cancel" onclick="closeCreateClientModal()">Cancel</button>
+            <button class="btn-modal-submit" id="createClientBtn" onclick="submitCreateClient()">
+                &#127970; Add Client
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="js/api-config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/theme.js"></script>
+<script>
+    var API_BASE = window.API_BASE || window.location.origin;
+
+    var allClients     = [];
+    var currentFilter  = 'all';
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof requireAuth === 'function' && !requireAuth()) return;
+        var user = getCurrentUser ? getCurrentUser() : null;
+        if (user) {
+            var av = document.getElementById('navAvatar');
+            var nm = document.getElementById('navName');
+            var rl = document.getElementById('navRole');
+            if (av) av.textContent = (user.fullName || user.username).charAt(0).toUpperCase();
+            if (nm) nm.textContent = user.fullName || user.username;
+            if (rl) {
+                rl.textContent = user.role;
+                rl.style.color = user.role === 'ADMIN' ? '#ef4444' :
+                    user.role === 'OPERATOR' ? '#4fc3f7' : '#10b981';
+            }
+        }
+        loadClients();
+        setInterval(loadClients, 20000);
+    });
+
+    async function loadClients() {
+        try {
+            var resp = await fetch(API_BASE + '/api/clients', { credentials: 'include' });
+            allClients = await resp.json();
+            renderClients(allClients);
+        } catch (e) { console.error('Failed to load clients:', e); }
+    }
+
+    function switchClientTab(filter, btn) {
+        currentFilter = filter;
+        document.querySelectorAll('.page-tab-btn').forEach(function (b) {
+            b.classList.remove('active');
+        });
+        btn.classList.add('active');
+
+        // FIX: map plural tab names to singular DB values
+        var typeMap = { 'senders': 'SENDER', 'receivers': 'RECEIVER' };
+
+        var filtered = filter === 'all'
+            ? allClients
+            : allClients.filter(function (c) {
+                return c.clientType === (typeMap[filter] || filter.toUpperCase());
+            });
+
+        renderClients(filtered);
+    }
+
+    function renderClients(clients) {
+        var grid    = document.getElementById('clientsGrid');
+        var user    = getCurrentUser ? getCurrentUser() : null;
+        var isAdmin = user && user.role === 'ADMIN';
+
+        if (clients.length === 0) {
+            grid.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No clients found.</p>';
+            return;
+        }
+
+        var html = '';
+        clients.forEach(function (c) {
+            var isSender = c.clientType === 'SENDER';
+            var color    = isSender ? '#4fc3f7' : '#10b981';
+            var icon     = isSender ? '&#128228;' : '&#128229;';
+            var label    = isSender ? 'Sender'   : 'Receiver';
+
+            html +=
+                '<div class="vehicle-card AVAILABLE" style="border-left-color:' + color + '">' +
+                '<div class="vehicle-card-top">' +
+                '<span class="vehicle-reg">' + icon + ' ' + c.companyName + '</span>' +
+                '<span class="vehicle-status-badge AVAILABLE" style="background:' + color + '15;color:' + color + ';border:1px solid ' + color + '33;">' + label + '</span>' +
+                '</div>' +
+
+                (c.contactPerson ? '<div class="vehicle-detail-row"><strong>Contact:</strong> ' + c.contactPerson + '</div>' : '') +
+                (c.email  ? '<div class="vehicle-detail-row"><strong>Email:</strong> '    + c.email  + '</div>' : '') +
+                (c.phone  ? '<div class="vehicle-detail-row"><strong>Phone:</strong> '    + c.phone  + '</div>' : '') +
+                (c.city   ? '<div class="vehicle-detail-row"><strong>Location:</strong> ' + c.city + (c.state ? ', ' + c.state : '') + '</div>' : '') +
+                (c.gstin  ? '<div class="vehicle-detail-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-dim);">' +
+                    '<strong>GSTIN:</strong> <span style="font-family:var(--font-mono);font-size:11px;">' + c.gstin + '</span></div>' : '') +
+
+                // DELETE button (Admin only)
+                (isAdmin
+                    ? '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-dim);">' +
+                    '<button onclick="deleteClient(' + c.id + ',\'' + c.companyName.replace(/'/g, "\\'") + '\')" ' +
+                    'style="padding:4px 14px;font-size:12px;font-weight:600;cursor:pointer;' +
+                    'background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);' +
+                    'border-radius:6px;font-family:var(--font-main);">&#128465; Delete</button>' +
+                    '</div>'
+                    : '') +
+                '</div>';
+        });
+
+        grid.innerHTML = html;
+    }
+
+    function openCreateClientModal() {
+        document.getElementById('createClientModal').style.display = 'flex';
+        document.getElementById('clientError').style.display   = 'none';
+        document.getElementById('clientSuccess').style.display = 'none';
+    }
+
+    function closeCreateClientModal() {
+        document.getElementById('createClientModal').style.display = 'none';
+    }
+
+    async function submitCreateClient() {
+        var type    = document.getElementById('clientType').value;
+        var company = document.getElementById('clientCompany').value.trim();
+        var email   = document.getElementById('clientEmail').value.trim();
+        var phone   = document.getElementById('clientPhone').value.trim();
+        var gstin   = document.getElementById('clientGstin').value.trim().toUpperCase();
+
+        if (!company) {
+            showClientError('Company name is required.');
+            return;
+        }
+
+        var btn = document.getElementById('clientSubmitBtn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Adding...'; }
+
+        try {
+            var resp = await fetch(API_BASE + '/api/clients', {
+                method:      'POST',
+                headers:     { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    clientType:  type,
+                    companyName: company,
+                    email:       email,
+                    phone:       phone,
+                    gstin:       gstin
+                })
+            });
+
+            var data = await resp.json();
+            if (resp.ok || resp.status === 201) {
+                document.getElementById('clientSuccess').textContent =
+                    '✓ ' + company + ' added successfully!';
+                document.getElementById('clientSuccess').style.display = 'block';
+                setTimeout(function () {
+                    closeClientModal();
+                    loadClients();
+                }, 1200);
+            } else {
+                showClientError(data.error || 'Failed to add client.');
+            }
+        } catch (e) {
+            showClientError('Network error: ' + e.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '📋 Add Client'; }
+        }
+    }
+
+    function showToast(type, title, message) {
+        var c = document.getElementById('toastContainer');
+        var t = document.createElement('div');
+        t.className = 'toast ' + type;
+        t.innerHTML = '<div class="toast-title">' + title + '</div><div class="toast-message">' + message + '</div>';
+        c.appendChild(t);
+        setTimeout(function () {
+            t.style.opacity = '0'; t.style.transform = 'translateX(110%)';
+            t.style.transition = 'all 0.3s ease';
+            setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300);
+        }, 5000);
+    }
+
+    async function deleteClient(id, companyName) {
+        if (!confirm('Delete client "' + companyName + '"?\nThis cannot be undone.')) return;
+        try {
+            var resp = await fetch(API_BASE + '/api/clients/' + id,
+                { method: 'DELETE', credentials: 'include' });
+            if (resp.ok) {
+                showToast('success', '&#128465; Deleted', '"' + companyName + '" removed from directory.');
+                loadClients();
+            } else {
+                var data = await resp.json();
+                showToast('danger', 'Delete Failed', data.error || 'Could not delete client.');
+            }
+        } catch (e) {
+            showToast('danger', 'Error', e.message);
+        }
+    }
+</script>
+</body>
+</html>

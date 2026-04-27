@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>VSST | Driver Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="css/style.css"/>
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        #driverRoot {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ---- HEADER ---- */
+        #driverHeader {
+            display: flex;
+            align-items: center;
+            height: 52px;
+            min-height: 52px;
+            flex-shrink: 0;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-dim);
+            padding: 0 14px;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .dh-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+        .dh-brand-name { font-size: 17px; font-weight: 800; color: var(--accent-blue); }
+        .dh-brand-sub  { font-size: 8px; color: var(--text-muted); text-transform: uppercase;
+            letter-spacing: 1.2px; display: block; }
+
+        .dh-role-badge {
+            padding: 3px 10px;
+            background: rgba(79,195,247,0.12);
+            border: 1px solid rgba(79,195,247,0.25);
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .dh-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .dh-user {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .dh-avatar {
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            background: rgba(79,195,247,0.14);
+            border: 1px solid rgba(79,195,247,0.3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .dh-username  { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+        .dh-role-text { font-size: 9px; color: var(--text-muted); text-transform: uppercase;
+            letter-spacing: 0.8px; }
+
+        .dh-btn {
+            padding: 5px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+        }
+        .dh-btn-logout {
+            background: rgba(239,68,68,0.08);
+            color: #ef4444;
+            border: 1px solid rgba(239,68,68,0.22);
+        }
+        .dh-btn-logout:hover { background: rgba(239,68,68,0.18); }
+
+        .dh-btn-theme {
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-normal);
+            width: 30px; height: 30px;
+            padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px; border-radius: 6px;
+        }
+
+        /* ---- BODY ---- */
+        #driverBody {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        /* ---- LEFT PANEL: Shipment Accordion ---- */
+        #shipmentPanel {
+            width: 300px;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-dim);
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .sp-header {
+            padding: 10px 12px 8px;
+            border-bottom: 1px solid var(--border-dim);
+            flex-shrink: 0;
+        }
+
+        .sp-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .sp-subtitle {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        #shipmentAccordionList {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px;
+        }
+        #shipmentAccordionList::-webkit-scrollbar { width: 3px; }
+        #shipmentAccordionList::-webkit-scrollbar-thumb {
+            background: var(--border-normal); border-radius: 2px;
+        }
+
+        /* ---- ACCORDION ITEMS ---- */
+        .acc-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-dim);
+            border-radius: 8px;
+            margin-bottom: 5px;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+        .acc-item.open { border-color: var(--border-normal); }
+
+        .acc-header {
+            display: flex;
+            align-items: center;
+            padding: 9px 11px;
+            cursor: pointer;
+            user-select: none;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        .acc-header:hover { background: var(--bg-card-hover); }
+
+        .acc-mode-icon { font-size: 14px; flex-shrink: 0; }
+
+        .acc-tracking {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-blue);
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .acc-status {
+            font-size: 8px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .acc-status.IN_TRANSIT { background: rgba(79,195,247,0.12);  color: #4fc3f7; }
+        .acc-status.DELAYED    { background: rgba(239,68,68,0.12);   color: #ef4444; }
+        .acc-status.REROUTED   { background: rgba(167,139,250,0.12); color: #a78bfa; }
+        .acc-status.DELIVERED  { background: rgba(16,185,129,0.12);  color: #10b981; }
+
+        .acc-progress {
+            font-size: 9px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .acc-arrow {
+            color: var(--text-muted);
+            font-size: 10px;
+            transition: transform 0.25s ease;
+            flex-shrink: 0;
+        }
+        .acc-item.open .acc-arrow { transform: rotate(180deg); }
+
+        /* ---- ACCORDION BODY ---- */
+        .acc-body {
+            display: none;
+            padding: 0 12px 12px;
+            border-top: 1px solid var(--border-dim);
+            animation: accFadeIn 0.2s ease;
+        }
+        .acc-item.open .acc-body { display: block; }
+
+        @keyframes accFadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Progress bar */
+        .acc-progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 2px;
+            margin: 10px 0 8px;
+            overflow: hidden;
+        }
+        body.light-theme .acc-progress-bar { background: rgba(0,0,0,0.08); }
+        .acc-progress-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        /* Detail rows */
+        .acc-detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            border-bottom: 1px solid var(--border-dim);
+        }
+        .acc-detail-row:last-child { border-bottom: none; }
+
+        .acc-detail-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .acc-detail-value {
+            font-size: 10.5px;
+            color: var(--text-primary);
+            font-weight: 500;
+            text-align: right;
+            max-width: 55%;
+        }
+
+        .acc-section-title {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin: 8px 0 4px;
+        }
+
+        /* Weather block */
+        .acc-weather {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            padding: 7px 9px;
+            margin-top: 6px;
+        }
+        .acc-weather-main { font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+        .acc-weather-detail { font-size: 10px; color: var(--text-secondary); }
+
+        /* Map button */
+        .acc-map-btn {
+            width: 100%;
+            margin-top: 8px;
+            padding: 6px;
+            background: rgba(79,195,247,0.08);
+            color: var(--accent-blue);
+            border: 1px solid rgba(79,195,247,0.2);
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+        }
+        .acc-map-btn:hover { background: rgba(79,195,247,0.16); }
+
+        /* Timeline in accordion */
+        .acc-timeline { margin-top: 6px; }
+        .acc-tl-item { display: flex; gap: 7px; align-items: flex-start; margin-bottom: 6px; }
+        .acc-tl-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--accent-blue); flex-shrink: 0; margin-top: 3px;
+        }
+        .acc-tl-dot.delivered { background: #10b981; }
+        .acc-tl-dot.delayed   { background: #ef4444; }
+        .acc-tl-dot.rerouted  { background: #a78bfa; }
+        .acc-tl-text { font-size: 10px; color: var(--text-secondary); line-height: 1.5; }
+        .acc-tl-event { font-weight: 700; color: var(--text-primary); font-size: 9px;
+            text-transform: uppercase; }
+        .acc-tl-time { font-size: 9px; color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace; }
+
+        /* Empty state */
+        .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .empty-icon { font-size: 36px; margin-bottom: 10px; }
+        .empty-text { font-size: 13px; color: var(--text-muted); }
+
+        /* ---- RIGHT: MAP + DETAIL ---- */
+        #rightPanel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        #driverMap {
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* ---- VEHICLE / COMPANY CARD ---- */
+        #vehicleCard {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-dim);
+            padding: 10px 14px;
+            flex-shrink: 0;
+        }
+
+        .vc-title {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .vc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 8px;
+        }
+
+        .vc-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+        }
+        .vc-label { color: var(--text-muted); }
+        .vc-value { color: var(--text-primary); font-weight: 600; }
+
+        /* ===== Notification bell styles ===== */
+        .notif-bell-wrap {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .notif-bell-btn {
+            position: relative;
+            width: 32px; height: 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-dim);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .notif-bell-btn:hover { border-color: var(--accent-blue); }
+
+        .notif-count {
+            position: absolute;
+            top: -5px; right: -5px;
+            background: #ef4444;
+            color: #fff;
+            font-size: 9px;
+            font-weight: 700;
+            min-width: 16px; height: 16px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 3px;
+            border: 1.5px solid var(--bg-secondary);
+        }
+
+        .notif-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: 300px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-normal);
+            border-radius: 10px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+            z-index: 9999;
+            max-height: 360px;
+            overflow: hidden;
+            flex-direction: column;
+        }
+        .notif-dropdown.open { display: flex; }
+
+        .notif-dd-header {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-dim);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .notif-dd-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+        .notif-dd-clear {
+            font-size: 10px;
+            color: var(--accent-blue);
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-family: 'Inter', sans-serif;
+        }
+        .notif-dd-clear:hover { text-decoration: underline; }
+
+        .notif-dd-list { overflow-y: auto; flex: 1; }
+        .notif-dd-list::-webkit-scrollbar { width: 3px; }
+        .notif-dd-list::-webkit-scrollbar-thumb { background: var(--border-normal); border-radius: 2px; }
+
+        .notif-item {
+            padding: 9px 12px;
+            border-bottom: 1px solid var(--border-dim);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .notif-item:hover { background: var(--bg-card-hover); }
+        .notif-item.unread { border-left: 3px solid var(--accent-blue); }
+
+        .ni-title  { font-size: 11px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+        .ni-msg    { font-size: 10px; color: var(--text-secondary); line-height: 1.4; }
+        .ni-time   { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+
+        .notif-dd-empty {
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Toast */
+        #driverToastContainer {
+            position: fixed;
+            bottom: 16px; right: 16px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            max-width: 320px;
+        }
+
+        @media (max-width: 768px) {
+            #driverBody { flex-direction: column; overflow: auto; }
+            #shipmentPanel { width: 100%; min-width: 100%; max-height: 320px; border-right: none; border-bottom: 1px solid var(--border-dim); }
+            #rightPanel { height: 500px; min-height: 500px; }
+            #driverMap { height: 300px; min-height: 300px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="driverRoot">
+
+    <header id="driverHeader">
+        <a href="/driver.html" class="dh-brand">
+            <svg width="28" height="28" viewBox="0 0 44 44" fill="none">
+                <rect x="1" y="17" width="10" height="10" rx="3" stroke="#4fc3f7" stroke-width="1.8"/>
+                <rect x="7" y="17" width="10" height="10" rx="3" stroke="#4fc3f7" stroke-width="1.8" fill="rgba(79,195,247,0.07)"/>
+                <rect x="15" y="12" width="14" height="20" rx="2" stroke="#4fc3f7" stroke-width="2" fill="rgba(79,195,247,0.12)"/>
+                <line x1="15" y1="22" x2="29" y2="22" stroke="#4fc3f7" stroke-width="1.2" opacity="0.6"/>
+                <line x1="22" y1="12" x2="22" y2="32" stroke="#4fc3f7" stroke-width="1.2" opacity="0.6"/>
+                <rect x="27" y="17" width="10" height="10" rx="3" stroke="#4fc3f7" stroke-width="1.8" fill="rgba(79,195,247,0.07)"/>
+                <rect x="33" y="17" width="10" height="10" rx="3" stroke="#4fc3f7" stroke-width="1.8"/>
+            </svg>
+            <div>
+                <div style="font-size:15px;font-weight:800;color:var(--accent-blue);">VSST</div>
+                <span style="font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.2px;">Virtual Supply Chain</span>
+            </div>
+        </a>
+
+        <span class="dh-role-badge" id="roleViewBadge">DRIVER VIEW</span>
+
+        <div class="dh-right">
+            <div class="notif-bell-wrap" id="driverBellWrap">
+                <button class="notif-bell-btn" id="driverBellBtn" onclick="vsst_toggleNotifications(event)">
+                    🔔
+                    <span class="notif-count" id="driverBellCount" style="display:none;">0</span>
+                </button>
+                <div class="notif-dropdown" id="driverNotifDropdown">
+                    <div class="notif-dd-header">
+                        <span class="notif-dd-title">Notifications</span>
+                        <button class="notif-dd-clear" onclick="vsst_markAllRead(event)">Mark all read</button>
+                    </div>
+                    <div class="notif-dd-list" id="driverNotifList">
+                        <div class="notif-dd-empty">Loading alerts...</div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="dh-btn dh-btn-theme" onclick="window.toggleTheme && window.toggleTheme()" title="Toggle Theme">☀️</button>
+
+            <div class="dh-user">
+                <div class="dh-avatar" id="driverAvatar">D</div>
+                <div>
+                    <div class="dh-username" id="driverNameText">Loading...</div>
+                    <div class="dh-role-text" id="driverRoleText">--</div>
+                </div>
+            </div>
+
+            <button class="dh-btn dh-btn-logout" onclick="driverLogout()">Logout</button>
+        </div>
+    </header>
+
+    <div id="driverBody">
+
+        <div id="shipmentPanel">
+            <div class="sp-header">
+                <div class="sp-title" id="spTitle">Your Shipments</div>
+                <div class="sp-subtitle" id="spSubtitle">Loading...</div>
+            </div>
+            <div id="shipmentAccordionList">
+                <div class="empty-state">
+                    <div class="empty-icon">📦</div>
+                    <div class="empty-text">Loading shipments...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="rightPanel">
+            <div id="driverMap"></div>
+            <div id="vehicleCard">
+                <div class="vc-title" id="vcTitle">📦 No shipment selected</div>
+                <div class="vc-grid" id="vcContent">
+                    <div style="font-size:12px;color:var(--text-muted);">
+                        Click a shipment to view details and track on map.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div></div><div id="driverToastContainer"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/api-config.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/theme.js"></script>
+
+<script>
+    // ============================================================
+    // VSST Driver/Partner Dashboard
+    // ============================================================
+
+    var API_BASE  = window.API_BASE || window.location.origin;
+    var driverMap = null;
+    var activeMarkers = [];
+    var activePolylines = [];
+    var currentUser = null;
+    var shipments = [];
+    var openAccordionId = null;
+
+    var STATUS_COLORS = {
+        'IN_TRANSIT': '#4fc3f7', 'DELAYED': '#ef4444',
+        'REROUTED':   '#a78bfa', 'DELIVERED': '#10b981'
+    };
+
+    var MODE_ICONS = { TRUCK:'🚛', SHIP:'🚢', PLANE:'✈️', TRAIN:'🚂' };
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', function () {
+        // Check auth
+        fetch(API_BASE + '/api/auth/me', { credentials: 'include' })
+            .then(function (r) {
+                if (!r.ok) {
+                    localStorage.removeItem('logipulse_user');
+                    window.location.href = '/login.html';
+                    return null;
+                }
+                return r.json();
+            })
+            .then(function (user) {
+                if (!user) return;
+                currentUser = user;
+                var role = (user.role || '').toUpperCase();
+
+                // Only DRIVER and PARTNER allowed here
+                if (role !== 'DRIVER' && role !== 'PARTNER') {
+                    window.location.href = '/index.html';
+                    return;
+                }
+
+                // Set up UI
+                var avatar = document.getElementById('driverAvatar');
+                var name   = document.getElementById('driverNameText');
+                var rt     = document.getElementById('driverRoleText');
+                var badge  = document.getElementById('roleViewBadge');
+
+                if (avatar) avatar.textContent = (user.fullName || user.username || 'U').charAt(0).toUpperCase();
+                if (name)   name.textContent   = user.fullName || user.username || '';
+                if (rt)     rt.textContent     = role;
+
+                if (role === 'PARTNER') {
+                    if (badge) badge.textContent = 'PARTNER VIEW';
+                    if (badge) badge.style.background = 'rgba(167,139,250,0.12)';
+                    if (badge) badge.style.borderColor = 'rgba(167,139,250,0.25)';
+                    if (badge) badge.style.color = '#a78bfa';
+                    document.getElementById('spTitle').textContent = 'Company Shipments';
+                }
+
+                // Init map
+                initMap();
+
+                // Load shipments
+                loadShipments();
+                setInterval(loadShipments, 15000);
+            })
+            .catch(function () {
+                localStorage.removeItem('logipulse_user');
+                window.location.href = '/login.html';
+            });
+    });
+
+    // ============================================================
+    // MAP INIT
+    // ============================================================
+    function initMap() {
+        driverMap = L.map('driverMap', {
+            center: [20, 78],
+            zoom:   4,
+            zoomControl: true
+        });
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap © CARTO',
+            maxZoom: 18
+        }).addTo(driverMap);
+    }
+
+    // ============================================================
+    // LOAD SHIPMENTS
+    // ============================================================
+    async function loadShipments() {
+        try {
+            var resp = await fetch(API_BASE + '/api/shipments', { credentials: 'include' });
+            if (!resp.ok) return;
+            shipments = await resp.json();
+
+            var subtitle = document.getElementById('spSubtitle');
+            if (subtitle) {
+                var active = shipments.filter(function(s) { return s.status !== 'DELIVERED'; }).length;
+                subtitle.textContent = shipments.length + ' total · ' + active + ' active';
+            }
+
+            renderAccordion();
+            updateMapMarkers();
+
+        } catch (e) {
+            console.error('loadShipments error:', e);
+        }
+    }
+
+    // ============================================================
+    // RENDER ACCORDION
+    // ============================================================
+    function renderAccordion() {
+        var container = document.getElementById('shipmentAccordionList');
+        if (!container) return;
+
+        if (!shipments || shipments.length === 0) {
+            container.innerHTML =
+                '<div class="empty-state">' +
+                '<div class="empty-icon">📦</div>' +
+                '<div class="empty-text">No shipments assigned yet.</div>' +
+                '</div>';
+            return;
+        }
+
+        // Sort: active first, then by status, then delivered
+        var sorted = shipments.slice().sort(function(a, b) {
+            var order = { DELAYED:0, IN_TRANSIT:1, REROUTED:2, DELIVERED:3 };
+            return (order[a.status] || 5) - (order[b.status] || 5);
+        });
+
+        var html = '';
+        sorted.forEach(function(s) {
+            var color    = STATUS_COLORS[s.status]   || '#94a3b8';
+            var modeIcon = MODE_ICONS[s.transportMode || 'TRUCK'] || '🚛';
+            var progress = calcProgress(s);
+            var isOpen   = openAccordionId === s.id;
+
+            html +=
+                '<div class="acc-item' + (isOpen ? ' open' : '') + '" id="acc-' + s.id + '">' +
+
+                // Header (always visible)
+                '<div class="acc-header" onclick="toggleAccordion(' + s.id + ')">' +
+                '<span class="acc-mode-icon">' + modeIcon + '</span>' +
+                '<span class="acc-tracking">' + s.trackingId + '</span>' +
+                '<span class="acc-status ' + s.status + '">' +
+                s.status.replace('_', ' ') +
+                '</span>' +
+                '<span class="acc-progress">' + progress + '%</span>' +
+                '<span class="acc-arrow">▼</span>' +
+                '</div>' +
+
+                // Body (expanded)
+                '<div class="acc-body" style="display:' + (isOpen ? 'block' : 'none') + ';">' +
+                buildAccordionBody(s, color, progress) +
+                '</div>' +
+
+                '</div>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    function buildAccordionBody(s, color, progress) {
+        var originCity  = s.origin      ? s.origin.split(',')[0]      : '--';
+        var destCity    = s.destination ? s.destination.split(',')[0] : '--';
+
+        var dispatched  = s.dispatchTime
+            ? new Date(s.dispatchTime).toLocaleString('en-IN', {
+                day:'2-digit', month:'short', year:'numeric',
+                hour:'2-digit', minute:'2-digit', hour12:true })
+            : '--';
+
+        var etaDisplay;
+        if (s.etaHoursInput && s.dispatchTime) {
+            var d = new Date(s.dispatchTime);
+            d.setHours(d.getHours() + s.etaHoursInput);
+            etaDisplay = d.toLocaleString('en-IN', {
+                    day:'2-digit', month:'short', year:'numeric',
+                    hour:'2-digit', minute:'2-digit', hour12:true }) +
+                ' <span style="font-size:9px;color:var(--text-muted);">(~' + s.etaHoursInput + 'h realistic)</span>';
+        } else if (s.estimatedDeliveryTime) {
+            etaDisplay = new Date(s.estimatedDeliveryTime).toLocaleString('en-IN', {
+                day:'2-digit', month:'short', year:'numeric',
+                hour:'2-digit', minute:'2-digit', hour12:true });
+        } else { etaDisplay = '--'; }
+
+        var distKm = calcDistanceKm(s.originLat, s.originLng, s.destLat, s.destLng);
+
+        var body =
+            '<div class="acc-progress-bar">' +
+            '<div class="acc-progress-fill" style="width:' + progress +
+            '%;background:' + color + ';"></div>' +
+            '</div>' +
+
+            '<div class="acc-detail-row"><span class="acc-detail-label">Origin</span>' +
+            '<span class="acc-detail-value">' + originCity + '</span></div>' +
+
+            '<div class="acc-detail-row"><span class="acc-detail-label">Destination</span>' +
+            '<span class="acc-detail-value">' + destCity + '</span></div>' +
+
+            '<div class="acc-detail-row"><span class="acc-detail-label">Cargo</span>' +
+            '<span class="acc-detail-value">' + (s.cargoType || '--') + '</span></div>' +
+
+            '<div class="acc-detail-row"><span class="acc-detail-label">Weight</span>' +
+            '<span class="acc-detail-value">' + (s.weightKg ? s.weightKg.toLocaleString() + ' kg' : '--') + '</span></div>' +
+
+            (distKm !== null ?
+                '<div class="acc-detail-row"><span class="acc-detail-label">Distance</span>' +
+                '<span class="acc-detail-value">' + distKm.toLocaleString() + ' km</span></div>' : '') +
+
+            '<div class="acc-detail-row"><span class="acc-detail-label">Mode</span>' +
+            '<span class="acc-detail-value">' +
+            (MODE_ICONS[s.transportMode || 'TRUCK'] || '🚛') + ' ' + (s.transportMode || 'TRUCK') +
+            '</span></div>' +
+
+            '<div class="acc-detail-row"><span class="acc-detail-label">Dispatched</span>' +
+            '<span class="acc-detail-value" style="font-size:10px;">' + dispatched + '</span></div>' +
+
+            '<div class="acc-detail-row"><span class="acc-detail-label">Est. Delivery</span>' +
+            '<span class="acc-detail-value" style="font-size:10px;">' + etaDisplay + '</span></div>' +
+
+            (s.assignedDriverName ?
+                '<div class="acc-detail-row"><span class="acc-detail-label">Driver</span>' +
+                '<span class="acc-detail-value">' + s.assignedDriverName + '</span></div>' : '') +
+
+            '<button class="acc-map-btn" onclick="focusOnMap(' + s.id + ')">🗺 Track on Map</button>';
+
+        if (s.milestones && s.milestones.length > 0) {
+            body += '<div class="acc-section-title">Journey Timeline</div><div class="acc-timeline">';
+            s.milestones.slice(0, 5).forEach(function(m) {
+                var dotClass = m.eventType === 'DELIVERED' ? 'delivered' :
+                    m.eventType === 'DELAYED' ? 'delayed' :
+                        m.eventType === 'REROUTED' ? 'rerouted' : '';
+                var time = m.occurredAt ? new Date(m.occurredAt).toLocaleString('en-IN', {
+                    day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', hour12:true }) : '';
+                body +=
+                    '<div class="acc-tl-item">' +
+                    '<div class="acc-tl-dot ' + dotClass + '"></div>' +
+                    '<div class="acc-tl-text">' +
+                    '<div class="acc-tl-event">' + (m.eventType || 'CHECKPOINT') + '</div>' +
+                    '<div>' + (m.description || '') + '</div>' +
+                    '<div class="acc-tl-time">' + time + '</div>' +
+                    '</div></div>';
+            });
+            body += '</div>';
+        }
+
+        return body;
+    }
+
+    // ============================================================
+    // ACCORDION TOGGLE
+    // ============================================================
+    function toggleAccordion(shipmentId) {
+        var wasOpen = openAccordionId === shipmentId;
+        openAccordionId = wasOpen ? null : shipmentId;
+        renderAccordion();
+
+        if (!wasOpen) {
+            focusOnMap(shipmentId);
+            fetchMilestones(shipmentId);
+        }
+    }
+
+    async function fetchMilestones(shipmentId) {
+        try {
+            var resp = await fetch(
+                API_BASE + '/api/shipments/' + shipmentId + '/milestones',
+                { credentials: 'include' }
+            );
+            if (!resp.ok) return;
+            var milestones = await resp.json();
+            var s = shipments.find(function(x) { return x.id === shipmentId; });
+            if (s) {
+                s.milestones = milestones;
+                renderAccordion();
+            }
+        } catch(e) {}
+    }
+
+    // ============================================================
+    // MAP FUNCTIONS
+    // ============================================================
+    function updateMapMarkers() {
+        activeMarkers.forEach(function(m)  { try { driverMap.removeLayer(m);  } catch(e){} });
+        activePolylines.forEach(function(p){ try { driverMap.removeLayer(p); } catch(e){} });
+        activeMarkers   = [];
+        activePolylines = [];
+
+        if (!shipments || shipments.length === 0) return;
+
+        shipments.forEach(function(s) {
+            if (!s.currentLat || !s.destLat) return;
+            var color    = STATUS_COLORS[s.status] || '#94a3b8';
+            var modeIcon = MODE_ICONS[s.transportMode || 'TRUCK'] || '🚛';
+
+            if (s.routeGeometry) {
+                try {
+                    var coords = JSON.parse(s.routeGeometry);
+                    if (coords && coords.length > 1) {
+                        var line = L.polyline(coords, {
+                            color:     color,
+                            weight:    2,
+                            opacity:   0.5,
+                            dashArray: s.status === 'REROUTED' ? '8,5' : null
+                        }).addTo(driverMap);
+                        activePolylines.push(line);
+                    }
+                } catch(e) {}
+            } else if (s.originLat && s.destLat) {
+                var line2 = L.polyline(
+                    [[s.originLat, s.originLng], [s.destLat, s.destLng]],
+                    { color: color, weight: 1.5, opacity: 0.4, dashArray: '5,5' }
+                ).addTo(driverMap);
+                activePolylines.push(line2);
+            }
+
+            var icon = L.divIcon({
+                className: '',
+                html: '<div style="width:22px;height:22px;background:' + color +
+                    ';border:2px solid #fff;border-radius:50%;display:flex;' +
+                    'align-items:center;justify-content:center;font-size:12px;' +
+                    'box-shadow:0 0 8px ' + color + '88;cursor:pointer;">' +
+                    modeIcon + '</div>',
+                iconSize:    [22,22],
+                iconAnchor:  [11,11],
+                popupAnchor: [0,-14]
+            });
+
+            var marker = L.marker([s.currentLat, s.currentLng], { icon: icon })
+                .bindPopup(
+                    '<div style="font-family:Inter,sans-serif;min-width:180px;">' +
+                    '<b style="color:' + color + ';">' + s.trackingId + '</b><br/>' +
+                    '<span style="font-size:12px;">' + (s.origin ? s.origin.split(',')[0] : '') +
+                    ' → ' + (s.destination ? s.destination.split(',')[0] : '') + '</span><br/>' +
+                    '<span style="font-size:11px;color:#94a3b8;">' +
+                    s.status.replace('_',' ') + '</span>' +
+                    '</div>'
+                )
+                .addTo(driverMap);
+            activeMarkers.push(marker);
+
+            if (s.destLat) {
+                var destMarker = L.circleMarker([s.destLat, s.destLng], {
+                    radius: 5, color: '#fff',
+                    fillColor: color, fillOpacity: 0.9, weight: 2
+                }).addTo(driverMap);
+                activeMarkers.push(destMarker);
+            }
+        });
+    }
+
+    function focusOnMap(shipmentId) {
+        var s = shipments.find(function(x) { return x.id === shipmentId; });
+        if (!s || !s.currentLat) return;
+
+        if (driverMap) {
+            driverMap.flyTo([s.currentLat, s.currentLng], 6, { duration: 1 });
+        }
+        updateVehicleCard(s);
+    }
+
+    function updateVehicleCard(s) {
+        var title   = document.getElementById('vcTitle');
+        var content = document.getElementById('vcContent');
+        if (!title || !content) return;
+
+        var color    = STATUS_COLORS[s.status] || '#94a3b8';
+        var modeIcon = MODE_ICONS[s.transportMode || 'TRUCK'] || '🚛';
+        var distKm   = calcDistanceKm(s.originLat, s.originLng, s.destLat, s.destLng);
+
+        title.innerHTML = modeIcon + ' ' + s.trackingId +
+            ' <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:6px;' +
+            'background:' + color + '18;color:' + color + ';border:1px solid ' + color + '30;' +
+            'margin-left:6px;">' + s.status.replace('_',' ') + '</span>';
+
+        var etaStr = '--';
+        if (s.etaHoursInput && s.dispatchTime) {
+            var d = new Date(s.dispatchTime);
+            d.setHours(d.getHours() + s.etaHoursInput);
+            etaStr = d.toLocaleString('en-IN', {
+                day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', hour12:true
+            }) + ' (~' + s.etaHoursInput + 'h)';
+        } else if (s.estimatedDeliveryTime) {
+            etaStr = new Date(s.estimatedDeliveryTime).toLocaleString('en-IN', {
+                day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', hour12:true
+            });
+        }
+
+        content.innerHTML =
+            '<div class="vc-row"><span class="vc-label">Route</span>' +
+            '<span class="vc-value">' +
+            (s.origin ? s.origin.split(',')[0] : '--') + ' → ' +
+            (s.destination ? s.destination.split(',')[0] : '--') +
+            '</span></div>' +
+            '<div class="vc-row"><span class="vc-label">Cargo</span>' +
+            '<span class="vc-value">' + (s.cargoType || '--') + '</span></div>' +
+            (distKm !== null ?
+                '<div class="vc-row"><span class="vc-label">Distance</span>' +
+                '<span class="vc-value">' + distKm.toLocaleString() + ' km</span></div>' : '') +
+            '<div class="vc-row"><span class="vc-label">Est. Delivery</span>' +
+            '<span class="vc-value" style="font-size:10px;">' + etaStr + '</span></div>';
+    }
+
+    // ============================================================
+    // LOGOUT
+    // ============================================================
+    async function driverLogout() {
+        try {
+            await fetch(API_BASE + '/api/auth/logout', {
+                method: 'POST', credentials: 'include'
+            });
+        } catch(e) {}
+
+        localStorage.removeItem('logipulse_user');
+        window.location.href = '/login.html';
+    }
+
+    // ============================================================
+    // HELPERS
+    // ============================================================
+    function calcProgress(s) {
+        if (s.status === 'DELIVERED') return 100;
+        if (!s.originLat || !s.destLat || !s.currentLat) return 0;
+        var total   = euclidDist(s.originLat, s.originLng, s.destLat, s.destLng);
+        var covered = euclidDist(s.originLat, s.originLng, s.currentLat, s.currentLng);
+        if (total === 0) return 0;
+        return Math.min(99, Math.round((covered / total) * 100));
+    }
+
+    function euclidDist(a,b,c,d) {
+        return Math.sqrt(Math.pow(c-a,2) + Math.pow(d-b,2));
+    }
+
+    function calcDistanceKm(lat1,lng1,lat2,lng2) {
+        if (!lat1 || !lat2) return null;
+        var R    = 6371;
+        var dLat = (lat2 - lat1) * Math.PI / 180;
+        var dLng = (lng2 - lng1) * Math.PI / 180;
+        var a    = Math.sin(dLat/2)*Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+            Math.sin(dLng/2)*Math.sin(dLng/2);
+        return Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
+</script>
+</body>
+</html>

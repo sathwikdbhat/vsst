@@ -1,0 +1,21 @@
+# Build output
+target/
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Local H2 database (do not commit)
+data/
+
+# Local properties (contains passwords)
+src/main/resources/application-local.properties
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
