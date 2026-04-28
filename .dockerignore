@@ -2,8 +2,5 @@ target/
 .idea/
 data/
 *.iml
-*.iws
-src/main/resources/application-local.properties
 .git/
-.gitignore
-README.md
+src/main/resources/application-local.properties
