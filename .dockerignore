@@ -1,8 +1,9 @@
 target/
 .idea/
-*.iml
 data/
+*.iml
+*.iws
 src/main/resources/application-local.properties
-.DS_Store
-Thumbs.db
-*.log
+.git/
+.gitignore
+README.md
